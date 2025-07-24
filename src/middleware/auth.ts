@@ -52,7 +52,10 @@ export async function authMiddleware(
     const decoded = await new Promise<any>((resolve, reject) => {
       jwt.verify(token, getKey, {
         audience: config.azure.audience,
-        issuer: [`https://login.microsoftonline.com/${config.azure.tenantId}/v2.0`],
+        issuer: [
+          `https://login.microsoftonline.com/${config.azure.tenantId}/v2.0`,
+          `https://sts.windows.net/${config.azure.tenantId}/`
+        ],
         algorithms: ['RS256']
       }, (err: Error | null, decoded: any) => {
         if (err) {
