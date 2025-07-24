@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
+import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { AuthenticatedRequest } from '../middleware/auth';
 import { sessionManager } from '../services/sessionManager';
@@ -13,7 +13,7 @@ const router = Router();
 router.post('/', async (req: AuthenticatedRequest, res) => {
   try {
     const userId = req.user!.oid;
-    const sessionId = req.headers['x-session-id'] as string || 
+    const sessionId = req.headers['mcp-session-id'] as string || 
                      `${userId}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 
     logger.info('MCP session request', { userId, sessionId });
@@ -36,8 +36,10 @@ router.post('/', async (req: AuthenticatedRequest, res) => {
       scratchpadTools.register(server, userId, sessionId);
 
       // Create transport
-      transport = new StreamableHTTPServerTransport();
-      await transport.connect(server);
+      transport = new StreamableHTTPServerTransport({
+        sessionIdGenerator: () => sessionId
+      });
+      await server.connect(transport);
       
       // Store session
       sessionManager.createSession(sessionId, transport, userId);
@@ -48,8 +50,7 @@ router.post('/', async (req: AuthenticatedRequest, res) => {
     res.setHeader('X-Session-Id', sessionId);
     
     // Process the MCP request
-    const response = await transport.handleRequest(req.body);
-    res.json(response);
+    await transport.handleRequest(req, res, req.body);
 
   } catch (error) {
     logger.error('MCP request failed', { error: error instanceof Error ? error.message : error });
