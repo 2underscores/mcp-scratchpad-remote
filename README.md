@@ -82,7 +82,7 @@ az ad app permission admin-consent --id <app-id>
 In the Azure Portal:
 1. Go to **App registrations** → Your app → **Expose an API**
 2. Add scopes: `mcp.read`, `mcp.write`
-3. Set redirect URIs for your client applications
+3. Note: No client credentials or redirect URIs needed - Claude handles OAuth directly with Azure AD
 
 ## Environment Variables
 
@@ -95,7 +95,7 @@ cp .env.example .env
 | Variable | Required | Description | Example |
 |----------|----------|-------------|---------|
 | `PORT` | No | Server port | `3000` |
-| `APP_BASE_URL` | Yes | Public base URL | `https://mcp-scratchpad.example.com` |
+| `APP_BASE_URL` | Yes | Public base URL | `https://mcp-scratchpad.trycloudflare.com` |
 | `AZURE_TENANT_ID` | Yes | Azure AD tenant ID | `72f988bf-86f1-41af-91ab-2d7cd011db47` |
 | `AZURE_AUDIENCE` | Yes | App registration URI | `api://scratchpad-mcp` |
 | `AZURE_ALLOWED_SCOPES` | Yes | Space-separated scopes | `mcp.read mcp.write` |
@@ -198,7 +198,46 @@ az containerapp up \
 
 ## Client Integration
 
-### Register with MCP Client
+### Claude Desktop Integration
+
+For Claude Desktop, configure your MCP server in `~/Library/Application Support/Claude/claude_desktop_config.json`:
+
+```json
+{
+  "mcpServers": {
+    "scratchpad": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-everything", "https://your-mcp-server.com/mcp"],
+      "env": {}
+    }
+  }
+}
+```
+
+The server implements OAuth 2.0 authorization code flow with Azure AD. When Claude first connects, it will automatically handle the OAuth flow by:
+1. Discovering OAuth configuration from `/.well-known/oauth-protected-resource`
+2. Redirecting you to Azure AD for authentication
+3. Exchanging tokens and using the access token for all MCP requests
+
+### Manual Client Integration
+
+For other MCP clients with OAuth support:
+
+```json
+{
+  "transport": {
+    "type": "http", 
+    "url": "https://your-mcp-server.com/mcp"
+  },
+  "oauth": {
+    "discovery_url": "https://your-mcp-server.com/.well-known/oauth-protected-resource"
+  }
+}
+```
+
+### Pre-authenticated Integration
+
+If you already have an Azure AD token, you can use it directly:
 
 ```json
 {
@@ -211,29 +250,6 @@ az containerapp up \
   }
 }
 ```
-
-### Authentication Flow
-
-1. **Obtain Azure AD Token**:
-   ```javascript
-   const token = await acquireTokenSilent({
-     scopes: ["api://scratchpad-mcp/mcp.read", "api://scratchpad-mcp/mcp.write"],
-     account: account
-   });
-   ```
-
-2. **Connect to MCP Server**:
-   ```javascript
-   const client = new MCPClient({
-     transport: {
-       type: "http",
-       url: "https://your-server.com/mcp",
-       headers: {
-         "Authorization": `Bearer ${token.accessToken}`
-       }
-     }
-   });
-   ```
 
 ## Testing
 

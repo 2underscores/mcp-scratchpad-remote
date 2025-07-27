@@ -33,6 +33,7 @@ function createConfig(): Config {
     sessionTtlMin: process.env.SESSION_TTL_MIN ? parseInt(process.env.SESSION_TTL_MIN, 10) : undefined
   };
 
+  console.log(rawConfig);
   try {
     return configSchema.parse(rawConfig);
   } catch (error) {

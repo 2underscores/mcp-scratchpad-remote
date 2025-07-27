@@ -124,4 +124,4 @@ export async function authMiddleware(
   }
 }
 
-export type { AuthenticatedRequest }; 
+export type { AuthenticatedRequest };

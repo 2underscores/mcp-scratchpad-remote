@@ -17,7 +17,7 @@ app.use(cors({
   origin: true,
   credentials: true,
   methods: ['GET', 'POST', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
+  allowedHeaders: ['Content-Type', 'Authorization', 'MCP-Session-Id', 'X-Session-Id']
 }));
 
 // Parse JSON bodies
